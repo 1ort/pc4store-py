@@ -98,8 +98,8 @@ class Action:
     txid: str
     block_number: str
     global_sequence: str
-    is_irreversible: str
-    is_reversed: str
+    is_irreversible: bool
+    is_reversed: bool
 
     @classmethod
     def from_dict(cls, data: dict):
