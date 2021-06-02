@@ -4,18 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 
-@dataclass
-class CreateOrderInput:
-    currency_name: str
-    currency_smart_contract: str
-    amount_to_pay: str
-    response_url: str
-    expiration_time: int = None
-    merchant_order_id: str = None
-    description: str = None
-    success_payment_redirect_url: str = None
-    failed_payment_redirect_url: str = None
-
+class FromDictMixin:
     @classmethod
     def from_dict(cls, input_: dict):
         expected_fields = cls.__dataclass_fields__.items()
@@ -29,6 +18,27 @@ class CreateOrderInput:
         return cls(**input_)
 
 
+@dataclass
+class CreateOrderInput(FromDictMixin):
+    currency_name: str
+    currency_smart_contract: str
+    amount_to_pay: str
+    response_url: str
+    expiration_time: int = None
+    merchant_order_id: str = None
+    description: str = None
+    success_payment_redirect_url: str = None
+    failed_payment_redirect_url: str = None
+
+
+@dataclass
+class TransferInput(FromDictMixin):
+    amount: str
+    currency_name: str
+    currency_smart_contract: str
+    eos_account: str
+
+
 class OrderStatus(Enum):
     CREATED = 'CREATED'
     MONEY_RECEIVED = 'MONEY_RECEIVED'
@@ -40,11 +50,12 @@ class OrderStatus(Enum):
 class TxnType(Enum):
     ORDER_PAYMENT = 'ORDER_PAYMENT'
     PAYBACK = 'PAYBACK'
+    WITHDRAW = 'WITHDRAW'
 
 
 class TxnStatus(Enum):
-    INITIATED = 'INITIATED'  # initiated payback
-    SENDED = 'SENDED'  # sended payback
+    INITIATED = 'INITIATED'  # initiated payback or withdraw
+    SENDED = 'SENDED'  # sended payback or withdraw
     RECEIVED = 'RECEIVED'  # txn found and start proccess
     ACCEPTED = 'ACCEPTED'  # txn processed with success
 
@@ -133,8 +144,8 @@ class OrderData:
     @classmethod
     def from_dict(cls, data: dict):
         payment_transfer = Transfer.from_dict(
-                       data.pop('payment_transfer')
-                   ) if 'payment_transfer' in data else None
+            data.pop('payment_transfer')
+        ) if 'payment_transfer' in data else None
         return cls(amount=Amount.from_dict(data.pop('amount')),
                    currency=Currency.from_dict(data.pop('currency')),
                    payment_transfer=payment_transfer,
@@ -142,7 +153,7 @@ class OrderData:
 
 
 @dataclass
-class Payload:
+class OrderPayload:
     order: OrderData
 
     @classmethod
@@ -151,13 +162,12 @@ class Payload:
 
 
 @dataclass
-class SuccessResponse:
-    payload: Payload
-    status = 'OK'
+class TransferPayload:
+    transfer: Transfer
 
     @classmethod
     def from_dict(cls, data: dict):
-        return cls(payload=Payload.from_dict(data['payload']))
+        return cls(transfer=Transfer.from_dict(data['transfer']))
 
 
 @dataclass
@@ -167,10 +177,30 @@ class ErrorResponse:
 
 
 @dataclass
-class CreateOrderSuccess(SuccessResponse):
-    ...
+class CreateOrderSuccess:
+    payload: OrderPayload
+    status = 'OK'
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(payload=OrderPayload.from_dict(data['payload']))
 
 
 @dataclass
 class CreateOrderError(ErrorResponse):
+    ...
+
+
+@dataclass
+class TransferSuccess:
+    payload: TransferPayload
+    status = 'OK'
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(payload=TransferPayload.from_dict(data['payload']))
+
+
+@dataclass
+class TransferError(ErrorResponse):
     ...
