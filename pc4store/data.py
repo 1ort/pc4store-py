@@ -37,6 +37,7 @@ class TransferInput(FromDictMixin):
     currency_name: str
     currency_smart_contract: str
     eos_account: str
+    response_url: str = None
 
 
 class OrderStatus(Enum):
